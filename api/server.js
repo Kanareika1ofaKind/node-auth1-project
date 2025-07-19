@@ -1,6 +1,13 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
+const session = require("express-session");
+const KnexSessionStore = require("connect-session-knex")(session);
+
+const authRouter = require("./auth/auth-router.js");
+const usersRouter = require("./users/users-router.js");
+
+const server = express();
 
 /**
   Do what needs to be done to support sessions with the `express-session` package!
@@ -15,14 +22,39 @@ const cors = require("cors");
   or you can use a session store like `connect-session-knex`.
  */
 
-const server = express();
+server.use(session({
+
+    name: "chocolatechip", // Name of the cookie
+    secret: 'boobs are yours', //process.env.SESSION_SECRET
+    saveUninitialized: false, // Do not save uninitialized sessions
+    resave: false, // Do not resave sessions that have not been modified
+    store: new KnexSessionStore({
+        knex: require("../data/db-config.js"), // Import your Knex configuration
+        tablename: "sessions", // Name of the table where sessions will be stored
+        sidfieldname: "sid", // Name of the field that stores the session ID
+        createtable: true, // Create the table if it does not exist
+        clearInterval: 1000 * 60 * 60, // Clear expired sessions every hour
+    }),
+    cookie: {
+        maxAge: 1000 * 60 * 60, // Cookie expiration time (1 hour)
+        secure: false, // Set to true if using HTTPS
+        httpOnly: true, // Prevents client-side JavaScript from accessing the cookie
+        //sameSite: 'strict', // Helps prevent CSRF attacks
+    }
+
+})
+);
 
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
 
+
+server.use('/api/auth', authRouter)
+server.use('/api/users', usersRouter)
+
 server.get("/", (req, res) => {
-  res.json({ api: "up" });
+  res.status(403).json({ message: 'acceess denied!' });
 });
 
 server.use((err, req, res, next) => { // eslint-disable-line
