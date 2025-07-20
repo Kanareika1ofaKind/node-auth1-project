@@ -3,7 +3,7 @@
 
 const router = require('express').Router(); 
 const bcrypt = require('bcryptjs')
-const { checkUsernameFree, checkUsernameExists, checkPasswordLength  } = require('./auth-middleware.js');
+const { restricted, checkUsernameFree, checkUsernameExists, checkPasswordLength, checkCurrentPassword } = require('./auth-middleware.js');
 const User = require('../users/users-model')
 
 
@@ -95,16 +95,6 @@ router.post('/login', checkUsernameExists, checkPasswordLength, (req, res, next)
   }
  */
 
-router.put('/changePassword', (req, res, next) => {
-    if (req.session.user) {
-res.status(200).json({ message: 'change password' });
-    }
-    else {
-        next({ status: 401, message: 'You shall not pass!' });
-    }
-    
-
-})
 
 router.get('/logout', (req, res) => {
     if (req.session.user) {
@@ -120,7 +110,34 @@ router.get('/logout', (req, res) => {
     }
 });
 
+/**
+  4 [PUT] /api/auth/change-password { "currentPw": "1234", "password": "12345" }
+ 
+  response for logged-in users:
+  status 200
+  {
+    "message": "password Updated!"
+  }
+ 
+  response on invalid credentials:
+  status 401
+  {
+    "message": "Invalid credentials"
+  }
+*/
 
+router.put('/change-password', restricted, checkCurrentPassword, checkPasswordLength, async (req, res, next) => {
+
+  const { password } = req.body;
+  const { user_id } = req.session.user;
+  const hash = await bcrypt.hashSync(password, 8); // Hash the new password
+  User.updatePassword(user_id, hash)
+    .then(() => {
+      res.status(200).json({ message: "password Updated!" });
+    })
+    .catch(next);
+
+})
 
 
  

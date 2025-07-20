@@ -53,8 +53,8 @@ server.use(cors());
 server.use('/api/auth', authRouter)
 server.use('/api/users', usersRouter)
 
-server.get("/", (req, res) => {
-  res.status(403).json({ message: 'acceess denied!' });
+server.get("*", (req, res) => {
+  res.status(404).json({ message: 'not found!' });
 });
 
 server.use((err, req, res, next) => { // eslint-disable-line

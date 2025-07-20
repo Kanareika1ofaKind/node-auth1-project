@@ -1,6 +1,5 @@
 const db = require('../../data/db-config.js')
-const User = require('../users/users-model.js')
-
+const bcrypt = require('bcryptjs')
 /*
   If the user does not have a session saved in the server
 
@@ -82,6 +81,26 @@ function checkPasswordLength(req, res, next) {
     }
     next();
 }
+async function checkCurrentPassword(req, res, next) {
+  const { currentPw, password } = req.body;
+  const { user_id } = req.session.user;
+
+  if (!password) {
+    return next({ status: 422, message: 'New password required' });
+  }
+  if (!currentPw) {
+    return next({ status: 422, message: 'Current password required' });
+  }
+  if (currentPw === password) {
+    return next({ status: 422, message: 'New password must be different from current password' });
+  }
+  const user = await db('users').where({ user_id }).first();
+  if (!user || !bcrypt.compareSync(currentPw, user.password)) {
+    return next({ status: 401, message: 'Invalid credentials' });
+  }
+  next();
+
+}
 
 // Don't forget to add these to the `exports` object so they can be required in other modules
 
@@ -89,5 +108,7 @@ module.exports = {
     restricted,
     checkUsernameFree,
     checkUsernameExists,
-    checkPasswordLength
+    checkPasswordLength,
+    checkCurrentPassword
+
 };
